@@ -1,8 +1,19 @@
+import datetime
+from decimal import Decimal
 from enum import Enum
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
-from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QLineEdit, QSpinBox, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDateEdit,
+    QDateTimeEdit,
+    QDoubleSpinBox,
+    QLineEdit,
+    QSpinBox,
+    QTimeEdit,
+)
 
 from pydanticInput.opts import apply_funcs, with_layout, with_widgets
 
@@ -21,10 +32,16 @@ def handle_BaseModel(model: BaseModel):
                 fields[name] = handle_int(field)
             elif field_annotations is str:
                 fields[name] = handler_str(field)
-            elif field_annotations is float:
+            elif field_annotations in (float, Decimal):
                 fields[name] = handle_numeric(field)
             elif field_annotations is bool:
-                fields[name] = "bool"
+                fields[name] = handle_bool(field)
+            elif field_annotations is datetime.datetime:
+                fields[name] = handle_datetime(field)
+            elif field_annotations is datetime.date:
+                fields[name] = handle_date(field)
+            elif field_annotations is datetime.time:
+                fields[name] = handle_time(field)
             elif field_annotations is list:
                 fields[name] = "list"
             elif field_annotations is dict:
@@ -33,8 +50,8 @@ def handle_BaseModel(model: BaseModel):
                 fields[name] = "set"
             elif field_annotations is tuple:
                 fields[name] = "tuple"
-            if issubclass(field_annotations, Enum):
-                fields[name] = field_annotations
+            elif issubclass(field_annotations, Enum):
+                fields[name] = handle_enums(field)
         else:
             fields[name] = (
                 field_annotations.__name__
@@ -45,7 +62,7 @@ def handle_BaseModel(model: BaseModel):
     return fields
 
 
-def handle_int(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)) -> QWidget:
+def handle_int(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)):
     """
     Handle an integer field to extract its properties.
     """
@@ -54,7 +71,7 @@ def handle_int(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)) -> QWidget:
     return widget, widget.value
 
 
-def handle_numeric(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)) -> QWidget:
+def handle_numeric(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)):
     """
     Handle a numeric field to extract its properties.
     """
@@ -63,7 +80,7 @@ def handle_numeric(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)) -> QWidget
     return widget, widget.value
 
 
-def handler_str(FieldInfo: FieldInfo) -> QWidget:
+def handler_str(FieldInfo: FieldInfo):
     """
     Handle a string field to extract its properties.
     """
@@ -71,9 +88,38 @@ def handler_str(FieldInfo: FieldInfo) -> QWidget:
     return widget, widget.text
 
 
-def handle_bool(FieldInfo: FieldInfo) -> QWidget:
+def handle_bool(FieldInfo: FieldInfo):
     """
     Handle a boolean field to extract its properties.
     """
     widget = QCheckBox()
     return widget, widget.isChecked
+
+
+def handle_datetime(FieldInfo: FieldInfo):
+    """Handle a datetime field to extract its properties."""
+    widget = QDateTimeEdit()
+    widget.setCalendarPopup(True)
+    return widget, widget.dateTime().toPython
+
+
+def handle_date(FieldInfo: FieldInfo):
+    """Handle a date field to extract its properties."""
+    widget = QDateEdit()
+    widget.setCalendarPopup(True)
+    return widget, widget.date().toPython
+
+
+def handle_time(FieldInfo: FieldInfo):
+    """Handle a time field to extract its properties."""
+    widget = QTimeEdit()
+    return widget, widget.time().toPython
+
+
+def handle_enums(FieldInfo: FieldInfo):
+    """
+    Handle an Enum field to extract its properties.
+    """
+    widget = QComboBox()
+    widget.addItems([member.value for member in FieldInfo.annotation])
+    return widget, widget.currentText

@@ -1,3 +1,4 @@
+import datetime
 from enum import Enum
 from pydantic import BaseModel
 
@@ -11,7 +12,11 @@ class city(str, Enum):
 class Person(BaseModel):
     name: str
     age: int
-    # city: city
+    city: city
+    registered: bool
+    date_of_birth: datetime.date
+    time_of_birth: datetime.time
+    current_moment: datetime.datetime
 
 
 Input(Person)
