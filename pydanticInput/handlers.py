@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Literal, _GenericAlias, get_args, get_origin
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -10,12 +11,15 @@ from PySide6.QtWidgets import (
     QDateEdit,
     QDateTimeEdit,
     QDoubleSpinBox,
+    QGridLayout,
     QLineEdit,
+    QPushButton,
     QSpinBox,
     QTimeEdit,
+    QWidget,
 )
 
-from pydanticInput.opts import apply_funcs, with_layout, with_widgets
+from pydanticInput.widgets import ListEditWidget
 
 
 def handle_BaseModel(model: BaseModel):
@@ -24,45 +28,52 @@ def handle_BaseModel(model: BaseModel):
     """
     fields = {}
     for name, field in model.__pydantic_fields__.items():
-        field_annotations = field.annotation
-        if isinstance(field_annotations, type):
-            if issubclass(field_annotations, BaseModel):
-                fields[name] = handle_BaseModel(field_annotations)
-            elif field_annotations is int:
-                fields[name] = handle_int(field)
-            elif field_annotations is str:
-                fields[name] = handler_str(field)
-            elif field_annotations in (float, Decimal):
-                fields[name] = handle_numeric(field)
-            elif field_annotations is bool:
-                fields[name] = handle_bool(field)
-            elif field_annotations is datetime.datetime:
-                fields[name] = handle_datetime(field)
-            elif field_annotations is datetime.date:
-                fields[name] = handle_date(field)
-            elif field_annotations is datetime.time:
-                fields[name] = handle_time(field)
-            elif field_annotations is list:
-                fields[name] = "list"
-            elif field_annotations is dict:
-                fields[name] = "dict"
-            elif field_annotations is set:
-                fields[name] = "set"
-            elif field_annotations is tuple:
-                fields[name] = "tuple"
-            elif issubclass(field_annotations, Enum):
-                fields[name] = handle_enums(field)
-        else:
-            fields[name] = (
-                field_annotations.__name__
-                if hasattr(field_annotations, "__name__")
-                else str(field_annotations)
-            )
+        fields[name] = type_dispatch(field.annotation)(field)
 
     return fields
 
 
-def handle_int(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)):
+def type_dispatch(field_type):
+    if isinstance(field_type, type):
+        if field_type is int:
+            return handle_int
+        elif field_type is str:
+            return handler_str
+        elif field_type in (float, Decimal):
+            return handle_numeric
+        elif field_type is bool:
+            return handle_bool
+        elif field_type is datetime.datetime:
+            return handle_datetime
+        elif field_type is datetime.date:
+            return handle_date
+        elif field_type is datetime.time:
+            return handle_time
+        elif get_origin(field_type) is list:
+            return handle_list
+        elif field_type is tuple:
+            return ...
+        elif field_type is dict:
+            return ...
+        elif field_type is set:
+            return ...
+        elif issubclass(field_type, Enum):
+            return handle_enums
+    elif isinstance(field_type, _GenericAlias):
+        if get_origin(field_type) is list:
+            return handle_list
+        elif get_origin(field_type) is tuple:
+            return ...
+        elif get_origin(field_type) is Literal:
+            return handle_literal
+    else:
+        raise NotImplementedError(
+            f"Handler for type:: {field_type} is not yet implemented."
+            "Consider implementing yourself or better yet raise a PR."
+        )
+
+
+def handle_int(field: FieldInfo, range=(-(2**31), 2**31 - 1)):
     """
     Handle an integer field to extract its properties.
     """
@@ -71,7 +82,7 @@ def handle_int(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)):
     return widget, widget.value
 
 
-def handle_numeric(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)):
+def handle_numeric(field: FieldInfo, range=(-(2**31), 2**31 - 1)):
     """
     Handle a numeric field to extract its properties.
     """
@@ -80,7 +91,7 @@ def handle_numeric(FieldInfo: FieldInfo, range=(-(2**31), 2**31 - 1)):
     return widget, widget.value
 
 
-def handler_str(FieldInfo: FieldInfo):
+def handler_str(field: FieldInfo):
     """
     Handle a string field to extract its properties.
     """
@@ -88,7 +99,7 @@ def handler_str(FieldInfo: FieldInfo):
     return widget, widget.text
 
 
-def handle_bool(FieldInfo: FieldInfo):
+def handle_bool(field: FieldInfo):
     """
     Handle a boolean field to extract its properties.
     """
@@ -96,30 +107,61 @@ def handle_bool(FieldInfo: FieldInfo):
     return widget, widget.isChecked
 
 
-def handle_datetime(FieldInfo: FieldInfo):
+def handle_datetime(field: FieldInfo):
     """Handle a datetime field to extract its properties."""
     widget = QDateTimeEdit()
     widget.setCalendarPopup(True)
     return widget, widget.dateTime().toPython
 
 
-def handle_date(FieldInfo: FieldInfo):
+def handle_date(field: FieldInfo):
     """Handle a date field to extract its properties."""
     widget = QDateEdit()
     widget.setCalendarPopup(True)
     return widget, widget.date().toPython
 
 
-def handle_time(FieldInfo: FieldInfo):
+def handle_list(field: FieldInfo):
+    item_type = get_args(field.annotation)[0]
+    item_input_widget, item_getter = type_dispatch(item_type)(
+        FieldInfo.from_annotation(item_type)
+    )
+
+    container = QWidget()
+    list_widget = ListEditWidget()
+    add_button = QPushButton("Add")
+    layout = QGridLayout(container)
+    layout.setContentsMargins(0, 0, 0, 0)
+
+    # Add widgets using grid positions
+    layout.addWidget(list_widget, 0, 0, 1, 2)  # list_widget spans 2 columns
+    layout.addWidget(item_input_widget, 1, 0)  # input field in left column
+    layout.addWidget(add_button, 1, 1)  # button in right column
+
+    add_button.clicked.connect(lambda: list_widget.add_value(item_getter()))
+    return container, list_widget.get_values
+
+
+def handle_time(field: FieldInfo):
     """Handle a time field to extract its properties."""
     widget = QTimeEdit()
     return widget, widget.time().toPython
 
 
-def handle_enums(FieldInfo: FieldInfo):
+def handle_enums(field: FieldInfo):
     """
     Handle an Enum field to extract its properties.
     """
     widget = QComboBox()
-    widget.addItems([member.value for member in FieldInfo.annotation])
+    widget.addItems([member.value for member in field.annotation])
     return widget, widget.currentText
+
+
+def handle_literal(field: FieldInfo):
+    """
+    Handle a Literal field to extract its properties.
+    """
+    value_map = {str(v): v for v in get_args(field.annotation)}
+    widget = QComboBox()
+    widget.addItems(value_map.keys())
+    return widget, lambda: value_map[widget.currentText()]

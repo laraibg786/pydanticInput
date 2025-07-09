@@ -9,6 +9,7 @@ import PySide6.QtWidgets
 if TYPE_CHECKING:
     import PySide6
 
+
 def apply_funcs(obj, *funcs):
     for func in funcs:
         obj = func(obj)
@@ -30,18 +31,26 @@ def curried(func):
 
 
 @curried
-def with_layout(layout: PySide6.QtWidgets.QLayout, widget: PySide6.QtWidgets.QWidget) -> PySide6.QtWidgets.QWidget:
+def with_layout(
+    layout: PySide6.QtWidgets.QLayout, widget: PySide6.QtWidgets.QWidget
+) -> PySide6.QtWidgets.QWidget:
     widget.setLayout(layout)
     return widget
 
 
 @curried
-def with_window_title(title: str, widget: PySide6.QtWidgets.QWidget) -> PySide6.QtWidgets.QWidget:
+def with_window_title(
+    title: str, widget: PySide6.QtWidgets.QWidget
+) -> PySide6.QtWidgets.QWidget:
     widget.setWindowTitle(title)
     return widget
 
+
 @curried
-def with_widgets(child_widgets: dict[str, PySide6.QtWidgets.QWidget], parent_widget: PySide6.QtWidgets.QWidget) -> PySide6.QtWidgets.QWidget:
+def with_widgets(
+    child_widgets: dict[str, PySide6.QtWidgets.QWidget],
+    parent_widget: PySide6.QtWidgets.QWidget,
+) -> PySide6.QtWidgets.QWidget:
     """
     Add child widgets to a parent widget.
     """
