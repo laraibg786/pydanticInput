@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import List
+from typing import List, Union
 
 from pydantic import BaseModel
 
@@ -38,10 +38,10 @@ class Person(BaseModel):
 
     # Optional and Union
     # nickname: Optional[str] = None
-    # contact_info: Union[str, EmailStr, None] = None  # ❌ Union not handled fully
+    contact_info: Union[str, float, datetime.datetime]
 
     # Collections
-    tags: List[str]
+    tags: List[Union[str, int]]
     # scores: Tuple[int, int, int]  # ❌ Tuple not handled
     # preferences: Dict[str, str]  # ❌ Dict not handled
     # unique_ids: Set[int]  # ❌ Set not handled

@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Literal, _GenericAlias, get_args, get_origin
+from typing import Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -12,9 +12,11 @@ from PySide6.QtWidgets import (
     QDateTimeEdit,
     QDoubleSpinBox,
     QGridLayout,
+    QHBoxLayout,
     QLineEdit,
     QPushButton,
     QSpinBox,
+    QStackedWidget,
     QTimeEdit,
     QWidget,
 )
@@ -34,11 +36,11 @@ def handle_BaseModel(model: BaseModel):
 
 
 def type_dispatch(field_type):
-    if isinstance(field_type, type):
+    if get_origin(field_type) is None and isinstance(field_type, type):
         if field_type is int:
             return handle_int
         elif field_type is str:
-            return handler_str
+            return handle_str
         elif field_type in (float, Decimal):
             return handle_numeric
         elif field_type is bool:
@@ -49,8 +51,6 @@ def type_dispatch(field_type):
             return handle_date
         elif field_type is datetime.time:
             return handle_time
-        elif get_origin(field_type) is list:
-            return handle_list
         elif field_type is tuple:
             return ...
         elif field_type is dict:
@@ -59,13 +59,14 @@ def type_dispatch(field_type):
             return ...
         elif issubclass(field_type, Enum):
             return handle_enums
-    elif isinstance(field_type, _GenericAlias):
-        if get_origin(field_type) is list:
-            return handle_list
-        elif get_origin(field_type) is tuple:
-            return ...
-        elif get_origin(field_type) is Literal:
-            return handle_literal
+    elif get_origin(field_type) is list:
+        return handle_list
+    elif get_origin(field_type) is tuple:
+        return ...
+    elif get_origin(field_type) is Literal:
+        return handle_literal
+    elif get_origin(field_type) is Union:
+        return handle_union
     else:
         raise NotImplementedError(
             f"Handler for type:: {field_type} is not yet implemented."
@@ -91,7 +92,7 @@ def handle_numeric(field: FieldInfo, range=(-(2**31), 2**31 - 1)):
     return widget, widget.value
 
 
-def handler_str(field: FieldInfo):
+def handle_str(field: FieldInfo):
     """
     Handle a string field to extract its properties.
     """
@@ -165,3 +166,38 @@ def handle_literal(field: FieldInfo):
     widget = QComboBox()
     widget.addItems(value_map.keys())
     return widget, lambda: value_map[widget.currentText()]
+
+
+def handle_union(field: FieldInfo):
+    """
+    Creates a QWidget for handling Union types in a form, allowing the user to select among multiple types.
+
+    Args:
+        field (FieldInfo): The field information containing the Union annotation.
+
+    Returns:
+        Tuple[QWidget, Callable[[], Any]]: 
+            - The QWidget containing a combo box for type selection and a stacked widget for the corresponding input widgets.
+            - A callable that returns the value from the currently selected widget.
+    """
+    container = QWidget()
+    type_selector = QComboBox()
+    stack = QStackedWidget()
+
+    type_selector.currentIndexChanged.connect(stack.setCurrentIndex)
+
+    layout = QHBoxLayout(container)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(type_selector)
+    layout.addWidget(stack)
+
+    union_types = get_args(field.annotation)
+    widget_mapping = dict(
+        type_dispatch(union_type)(FieldInfo.from_annotation(union_type))
+        for union_type in union_types
+    )
+    for widget, t in zip(widget_mapping, union_types):
+        type_selector.addItem(t.__name__ if hasattr(t, "__name__") else str(t))
+        stack.addWidget(widget)
+
+    return container, lambda: widget_mapping[stack.currentWidget()]()
