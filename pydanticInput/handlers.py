@@ -62,6 +62,8 @@ def type_dispatch(field_type):
             return ...
         elif issubclass(field_type, Enum):
             return handle_enums
+        elif field_type is type(None):
+            return handle_None
     elif origin_type is list:
         return handle_list
     elif origin_type is tuple:
@@ -72,11 +74,10 @@ def type_dispatch(field_type):
         False if sys.version_info < (3, 10) else (origin_type is types.UnionType)
     ):
         return handle_union
-    else:
-        raise NotImplementedError(
-            f"Handler for type:: `{field_type}` is not yet implemented. "
-            "Consider implementing yourself or better yet raise a PR."
-        )
+    raise NotImplementedError(
+        f"Handler for type:: `{field_type}` is not yet implemented. "
+        "Consider implementing yourself or better yet raise a PR."
+    )
 
 
 def handle_int(field: FieldInfo, range=(-(2**31), 2**31 - 1)):
@@ -206,3 +207,7 @@ def handle_union(field: FieldInfo):
         stack.addWidget(widget)
 
     return container, lambda: widget_mapping[stack.currentWidget()]()
+
+
+def handle_None():
+    return QWidget(), lambda: None

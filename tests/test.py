@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -37,7 +37,7 @@ class Person(BaseModel):
     # duration_alive: datetime.timedelta  # ❌ Not handled
 
     # Optional and Union
-    # nickname: Optional[str] = None
+    nickname: Optional[str] = None
     contact_info: Union[str, float, datetime.datetime]
 
     # Collections
