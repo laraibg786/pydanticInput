@@ -1,7 +1,9 @@
 import datetime
-from decimal import Decimal
+import decimal
+import sys
+import types
+import typing
 from enum import Enum
-from typing import Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -36,12 +38,13 @@ def handle_BaseModel(model: BaseModel):
 
 
 def type_dispatch(field_type):
-    if get_origin(field_type) is None and isinstance(field_type, type):
+    origin_type = typing.get_origin(field_type)
+    if origin_type is None and isinstance(field_type, type):
         if field_type is int:
             return handle_int
         elif field_type is str:
             return handle_str
-        elif field_type in (float, Decimal):
+        elif field_type in (float, decimal.Decimal):
             return handle_numeric
         elif field_type is bool:
             return handle_bool
@@ -59,17 +62,19 @@ def type_dispatch(field_type):
             return ...
         elif issubclass(field_type, Enum):
             return handle_enums
-    elif get_origin(field_type) is list:
+    elif origin_type is list:
         return handle_list
-    elif get_origin(field_type) is tuple:
+    elif origin_type is tuple:
         return ...
-    elif get_origin(field_type) is Literal:
+    elif origin_type is typing.Literal:
         return handle_literal
-    elif get_origin(field_type) is Union:
+    elif origin_type is typing.Union or (
+        False if sys.version_info < (3, 10) else (origin_type is types.UnionType)
+    ):
         return handle_union
     else:
         raise NotImplementedError(
-            f"Handler for type:: {field_type} is not yet implemented."
+            f"Handler for type:: `{field_type}` is not yet implemented. "
             "Consider implementing yourself or better yet raise a PR."
         )
 
@@ -123,7 +128,7 @@ def handle_date(field: FieldInfo):
 
 
 def handle_list(field: FieldInfo):
-    item_type = get_args(field.annotation)[0]
+    item_type = typing.get_args(field.annotation)[0]
     item_input_widget, item_getter = type_dispatch(item_type)(
         FieldInfo.from_annotation(item_type)
     )
@@ -162,7 +167,7 @@ def handle_literal(field: FieldInfo):
     """
     Handle a Literal field to extract its properties.
     """
-    value_map = {str(v): v for v in get_args(field.annotation)}
+    value_map = {str(v): v for v in typing.get_args(field.annotation)}
     widget = QComboBox()
     widget.addItems(value_map.keys())
     return widget, lambda: value_map[widget.currentText()]
@@ -176,7 +181,7 @@ def handle_union(field: FieldInfo):
         field (FieldInfo): The field information containing the Union annotation.
 
     Returns:
-        Tuple[QWidget, Callable[[], Any]]: 
+        Tuple[QWidget, Callable[[], Any]]:
             - The QWidget containing a combo box for type selection and a stacked widget for the corresponding input widgets.
             - A callable that returns the value from the currently selected widget.
     """
@@ -191,7 +196,7 @@ def handle_union(field: FieldInfo):
     layout.addWidget(type_selector)
     layout.addWidget(stack)
 
-    union_types = get_args(field.annotation)
+    union_types = typing.get_args(field.annotation)
     widget_mapping = dict(
         type_dispatch(union_type)(FieldInfo.from_annotation(union_type))
         for union_type in union_types
