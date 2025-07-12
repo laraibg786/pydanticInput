@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -43,7 +43,7 @@ class Person(BaseModel):
     # Collections
     tags: List[Union[str, int]]
     # scores: Tuple[int, int, int]  # ❌ Tuple not handled
-    # preferences: Dict[str, str]  # ❌ Dict not handled
+    preferences: Dict[str, str]  # ❌ Dict not handled
     # unique_ids: Set[int]  # ❌ Set not handled
 
     # Special Types

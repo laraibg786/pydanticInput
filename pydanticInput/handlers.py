@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pydanticInput.widgets import ListEditWidget
+from pydanticInput.widgets import DictEditWidget, ListEditWidget
 
 
 def handle_BaseModel(model: BaseModel):
@@ -56,8 +56,6 @@ def type_dispatch(field_type):
             return handle_time
         elif field_type is tuple:
             return ...
-        elif field_type is dict:
-            return ...
         elif field_type is set:
             return ...
         elif issubclass(field_type, Enum):
@@ -66,6 +64,8 @@ def type_dispatch(field_type):
             return handle_None
     elif origin_type is list:
         return handle_list
+    elif origin_type is dict:
+        return handle_dict
     elif origin_type is tuple:
         return ...
     elif origin_type is typing.Literal:
@@ -149,6 +149,32 @@ def handle_list(field: FieldInfo):
     return container, list_widget.get_values
 
 
+def handle_dict(field: FieldInfo):
+    key_type, value_type = typing.get_args(field.annotation)
+    key_widget, key_getter = type_dispatch(key_type)(
+        FieldInfo.from_annotation(key_type)
+    )
+    value_widget, value_getter = type_dispatch(value_type)(
+        FieldInfo.from_annotation(value_type)
+    )
+
+    container = QWidget()
+    dict_widget = DictEditWidget()
+    add_button = QPushButton("Add")
+
+    layout = QGridLayout(container)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(dict_widget, 0, 0, 1, 3)
+    layout.addWidget(key_widget, 1, 0)
+    layout.addWidget(value_widget, 1, 1)
+    layout.addWidget(add_button, 1, 2)
+
+    add_button.clicked.connect(
+        lambda: dict_widget.add_pair(key_getter(), value_getter())
+    )
+    return container, dict_widget.get_dict
+
+
 def handle_time(field: FieldInfo):
     """Handle a time field to extract its properties."""
     widget = QTimeEdit()
@@ -209,5 +235,5 @@ def handle_union(field: FieldInfo):
     return container, lambda: widget_mapping[stack.currentWidget()]()
 
 
-def handle_None():
+def handle_None(field: FieldInfo):
     return QWidget(), lambda: None
