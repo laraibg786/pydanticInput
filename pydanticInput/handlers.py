@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QDateEdit,
     QDateTimeEdit,
     QDoubleSpinBox,
+    QFormLayout,
     QGridLayout,
     QHBoxLayout,
     QLineEdit,
@@ -20,21 +21,43 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QStackedWidget,
     QTimeEdit,
+    QVBoxLayout,
     QWidget,
 )
 
 from pydanticInput.widgets import DictEditWidget, ListEditWidget
 
 
-def handle_BaseModel(model: BaseModel):
+def handle_BaseModel(model: typing.Union[BaseModel, FieldInfo]):
     """
     Handle a Pydantic BaseModel to extract its fields and types.
     """
-    fields = {}
-    for name, field in model.__pydantic_fields__.items():
-        fields[name] = type_dispatch(field.annotation)(field)
+    fields_container = QWidget()
+    fields_container.setLayout(QFormLayout())
+    fields_container.layout().setContentsMargins(0,0,0,0)
 
-    return fields
+    if isinstance(model, FieldInfo):
+        output_widget = QWidget()
+        output_widget.setLayout(QVBoxLayout())
+        output_widget.layout().setContentsMargins(0,0,0,0)
+        cb = QCheckBox("show input widget")
+        output_widget.layout().addWidget(cb)
+        output_widget.layout().addWidget(fields_container)
+        cb.toggled.connect(fields_container.setVisible)
+        fields_container.setVisible(cb.isChecked())
+        model = model.annotation
+    else:
+        output_widget = fields_container
+
+    field_val_map = {}
+    for field_name, field in model.__pydantic_fields__.items():
+        field_widget, field_getter = type_dispatch(field.annotation)(field)
+        fields_container.layout().addRow(field_name, field_widget)
+        field_val_map[field_name] = field_getter
+
+    return output_widget, lambda: {
+        field_name: getter() for field_name, getter in field_val_map.items()
+    }
 
 
 def type_dispatch(field_type):
@@ -60,6 +83,8 @@ def type_dispatch(field_type):
             return ...
         elif issubclass(field_type, Enum):
             return handle_enums
+        elif issubclass(field_type, BaseModel):
+            return handle_BaseModel
         elif field_type is type(None):
             return handle_None
     elif origin_type is list:

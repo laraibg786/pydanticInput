@@ -26,6 +26,7 @@ class Person(BaseModel):
     age: int
     height: float
     active: bool
+    address: Address
 
     # Enum
     city: CityEnum
@@ -56,4 +57,4 @@ class Person(BaseModel):
     # address: Address  # ❌ Nested BaseModel not handled
 
 
-Input(Person)
+print(Person(**Input(Person)))
