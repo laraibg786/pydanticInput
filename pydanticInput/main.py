@@ -1,23 +1,13 @@
-from __future__ import annotations
+import pydantic
+from PySide6.QtWidgets import QApplication, QDialogButtonBox, QScrollArea
 
-from typing import TYPE_CHECKING
-
-from PySide6.QtWidgets import (
-    QApplication,
-    QDialogButtonBox,
-    QScrollArea,
-)
-
-from pydanticInput.handlers import handle_BaseModel
-
-if TYPE_CHECKING:
-    from pydantic import BaseModel
+import pydanticInput
 
 
-def Input(model: BaseModel):
+def Input(model: pydantic.BaseModel):
     vals = {}
     app = QApplication([])
-    widget, getter = handle_BaseModel(model)
+    widget, getter = pydanticInput.type_dispatch(model)(model)
     btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
     btns.accepted.connect(lambda: vals.update(getter()))
     btns.accepted.connect(app.quit)
