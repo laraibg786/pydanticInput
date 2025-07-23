@@ -1,6 +1,7 @@
 """
-Special forms are constructs in the typing module that have unique syntax or behavior.
-According to the Python documentation, the following are considered special forms:
+Special forms are constructs in the typing module that have unique syntax or
+behavior. According to the Python documentation, the following are considered
+special forms:
 
 - typing.Union
 - typing.Optional
@@ -18,17 +19,22 @@ from PySide6 import QtWidgets
 import pydanticInput
 
 
-def handle_union(field: fields.FieldInfo):
+def handle_union(
+    field: fields.FieldInfo,
+) -> tuple[QtWidgets.QWidget, typing.Callable[[], typing.Any]]:
     """
-    Creates a QWidget for handling Union types in a form, allowing the user to select among multiple types.
+    Creates a QWidget for handling Union types in a form, allowing the user to
+    select among multiple types.
 
     Args:
-        field (FieldInfo): The field information containing the Union annotation.
+        field (FieldInfo): The field information containing the Union annotation
 
     Returns:
         Tuple[QWidget, Callable[[], Any]]:
-            - The QWidget containing a combo box for type selection and a stacked widget for the corresponding input widgets.
-            - A callable that returns the value from the currently selected widget.
+            - The QWidget containing a combo box for type selection and a
+            stacked widget for the corresponding input widgets.
+            - A callable that returns the value from the currently selected
+            widget.
     """
     container = QtWidgets.QWidget()
     type_selector = QtWidgets.QComboBox()
@@ -48,16 +54,23 @@ def handle_union(field: fields.FieldInfo):
         )
         for union_type in union_types
     )
-    for widget, t in zip(widget_mapping, union_types):
+    for widget, t in zip(widget_mapping, union_types, strict=True):
         type_selector.addItem(t.__name__ if hasattr(t, "__name__") else str(t))
         stack.addWidget(widget)
 
     return container, lambda: widget_mapping[stack.currentWidget()]()
 
 
-def handle_literal(field: fields.FieldInfo):
+def handle_literal(
+    field: fields.FieldInfo,
+) -> tuple[QtWidgets.QComboBox, typing.Callable[[], typing.Any]]:
     """
     Handle a Literal field to extract its properties.
+
+    Returns:
+        Tuple[QComboBox, Callable[[], Any]]:
+            - The QComboBox widget for selecting among literal values.
+            - A callable that returns the selected literal value.
     """
     value_map = {str(v): v for v in typing.get_args(field.annotation)}
     widget = QtWidgets.QComboBox()

@@ -7,11 +7,15 @@ from PySide6 import QtWidgets
 import pydanticInput
 
 
-def handle_BaseModel(
-    model: typing.Union[pydantic.BaseModel, fields.FieldInfo],
-):
+def handle_BaseModel(  # noqa: N802
+    model: pydantic.BaseModel | fields.FieldInfo,
+) -> tuple[QtWidgets.QWidget, typing.Callable[[], dict]]:
     """
     Handle a Pydantic BaseModel to extract its fields and types.
+
+    Returns:
+        A tuple containing a QWidget and a callable that returns a dictionary of
+        field values.
     """
     fields_container = QtWidgets.QWidget()
     fields_container.setLayout(QtWidgets.QFormLayout())
@@ -32,9 +36,9 @@ def handle_BaseModel(
 
     field_val_map = {}
     for field_name, field in model.__pydantic_fields__.items():
-        field_widget, field_getter = pydanticInput.type_dispatch(field.annotation)(
-            field
-        )
+        field_widget, field_getter = pydanticInput.type_dispatch(
+            field.annotation
+        )(field)
         fields_container.layout().addRow(field_name, field_widget)
         field_val_map[field_name] = field_getter
 

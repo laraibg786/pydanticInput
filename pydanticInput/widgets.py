@@ -1,29 +1,23 @@
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QAbstractItemView,
-    QHeaderView,
-    QListWidget,
-    QMenu,
-    QTableWidget,
-    QTableWidgetItem,
-)
+import typing
+
+from PySide6 import QtCore, QtWidgets
 
 
-class ListEditWidget(QListWidget):
+class ListEditWidget(QtWidgets.QListWidget):
     """
     Custom QListWidget with right-click removal support and
     a simple method to add items programmatically.
     Displays items with visual separators.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QtWidgets.QWidget = None):
         super().__init__(parent)
-        self.setSelectionMode(QListWidget.SingleSelection)
+        self.setSelectionMode(QtWidgets.QListWidget.SingleSelection)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
-        self.setDragDropMode(QListWidget.InternalMove)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setDragDropMode(QtWidgets.QListWidget.InternalMove)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
 
         # Style items with border and padding for clear visual separation
@@ -40,8 +34,8 @@ class ListEditWidget(QListWidget):
             }
         """)
 
-    def _show_context_menu(self, position):
-        menu = QMenu()
+    def _show_context_menu(self, position: QtCore.QPoint):
+        menu = QtWidgets.QMenu()
         remove_action = menu.addAction("Remove")
         action = menu.exec(self.mapToGlobal(position))
         if action == remove_action:
@@ -49,62 +43,73 @@ class ListEditWidget(QListWidget):
             if item:
                 self.takeItem(self.row(item))
 
-    def add_value(self, item):
+    def add_value(self, item: object) -> None:
         """
         Add an item to the list. Supports basic types.
         """
         self.addItem(repr(item))
 
-    def get_values(self):
+    def get_values(self) -> list[object]:
         """
         Return all values in the list as strings.
+
+        Returns:
+            list: A list of values (as reconstructed from their string
+            representations).
         """
         return [eval(self.item(i).text()) for i in range(self.count())]
 
 
-class DictEditWidget(QTableWidget):
+class DictEditWidget(QtWidgets.QTableWidget):
     """
-    A widget to allow editing a dictionary with key-value pairs using QTableWidget.
+    A widget to allow editing a dictionary with key-value pairs using
+    QTableWidget.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QtWidgets.QWidget = None):
         super().__init__(0, 2, parent)
         self.setHorizontalHeaderLabels(["Key", "Value"])
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Stretch
+        )
+        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
-        self.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
 
         self.__keys = set()
 
-    def _show_context_menu(self, position):
-        menu = QMenu()
+    def _show_context_menu(self, position: QtCore.QPoint):
+        menu = QtWidgets.QMenu()
         remove_action = menu.addAction("Remove Selected Row")
         action = menu.exec(self.viewport().mapToGlobal(position))
         if action == remove_action:
             for row in sorted(
-                set(index.row() for index in self.selectedIndexes()), reverse=True
+                set(index.row() for index in self.selectedIndexes()),
+                reverse=True,
             ):
                 self.removeRow(row)
 
-    def add_pair(self, key, value):
+    def add_pair(self, key: typing.Hashable, value: object) -> None:
         try:
             if key in self.__keys:
-                print(f"warning:: ignoring key:: `{key}` is for exisitng already.")
+                print(
+                    f"warning:: ignoring key:: `{key}` is for exisitng already."
+                )
                 return
             self.__keys.add(key)
         except TypeError:
             print(
-                f"warning:: the key of type `{type(key)}` is not hashable. Discarding."
+                f"warning:: the key of type `{type(key)}` is not hashable."
+                " Discarding."
             )
             return
         row_position = self.rowCount()
         self.insertRow(row_position)
-        self.setItem(row_position, 0, QTableWidgetItem(repr(key)))
-        self.setItem(row_position, 1, QTableWidgetItem(repr(value)))
+        self.setItem(row_position, 0, QtWidgets.QTableWidgetItem(repr(key)))
+        self.setItem(row_position, 1, QtWidgets.QTableWidgetItem(repr(value)))
 
-    def get_dict(self):
+    def get_dict(self) -> dict[typing.Hashable, object]:
         result = {}
         for row in range(self.rowCount()):
             key_item = self.item(row, 0)
@@ -112,11 +117,11 @@ class DictEditWidget(QTableWidget):
             if key_item and value_item:
                 try:
                     result[eval(key_item.text())] = eval(value_item.text())
-                except Exception as e:
+                except (SyntaxError, NameError, TypeError, ValueError) as e:
                     print(
                         "warning:: encounterd the error for converting: "
-                        f"key = {key_item.text()} :: value = {value_item.text()}\n"
-                        f"exception :: {e}"
+                        f"key = {key_item.text()} | value = {value_item.text()}"
+                        f"\nexception :: {e}"
                     )
                     continue
         return result
