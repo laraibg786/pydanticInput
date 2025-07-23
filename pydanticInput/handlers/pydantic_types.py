@@ -7,15 +7,26 @@ from PySide6 import QtWidgets
 import pydanticInput
 
 
-def handle_BaseModel(  # noqa: N802
+def handle_BaseModel(
     model: pydantic.BaseModel | fields.FieldInfo,
 ) -> tuple[QtWidgets.QWidget, typing.Callable[[], dict]]:
     """
-    Handle a Pydantic BaseModel to extract its fields and types.
+    Create a QWidget form for a Pydantic BaseModel and a callable to get input.
+
+    Args:
+        model (BaseModel | FieldInfo):
+            The Pydantic model class or a FieldInfo object with the model
+            annotation.
 
     Returns:
-        A tuple containing a QWidget and a callable that returns a dictionary of
-        field values.
+        tuple[QWidget, Callable[[], dict]]: A tuple where:
+            - The QWidget contains the form for the model fields.
+            - The callable returns a dict mapping field names to user input.
+
+    Notes:
+        - If a FieldInfo is provided, a checkbox is included to show or hide
+          the input widget.
+        - Nested types (BaseModel fields) are also handled recursively.
     """
     fields_container = QtWidgets.QWidget()
     fields_container.setLayout(QtWidgets.QFormLayout())

@@ -15,11 +15,16 @@ def handle_int(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QSpinBox, typing.Callable[[], int]]:
     """
-    Handle an integer field to extract its properties.
+    Create a QSpinBox for an integer field and a callable to get its value.
+
+    Args:
+        field (FieldInfo): The field info for the int field.
 
     Returns:
-        A tuple containing a QSpinBox widget and a callable that returns the
-        current integer value.
+        tuple[QSpinBox, Callable[[], int]]: A tuple where:
+            - QSpinBox: The widget for integer input.
+            - Callable[[], int]: Returns the current integer value from the
+              widget.
     """
     widget = QtWidgets.QSpinBox()
     widget.setRange(-(2**31), 2**31 - 1)
@@ -30,11 +35,17 @@ def handle_numeric(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QDoubleSpinBox, typing.Callable[[], float]]:
     """
-    Handle a numeric field to extract its properties.
+    Create a QDoubleSpinBox for a float/Decimal field and a callable to get
+    its value.
+
+    Args:
+        field (FieldInfo): The field info for the numeric field.
 
     Returns:
-        A tuple containing a QDoubleSpinBox widget and a callable that returns
-        the current float value.
+        tuple[QDoubleSpinBox, Callable[[], float]]: A tuple where:
+            - QDoubleSpinBox: The widget for float/decimal input.
+            - Callable[[], float]: Returns the current float value from the
+              widget.
     """
     widget = QtWidgets.QDoubleSpinBox()
     widget.setRange(-(2**31), 2**31 - 1)
@@ -45,11 +56,16 @@ def handle_str(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QLineEdit, typing.Callable[[], str]]:
     """
-    Handle a string field to extract its properties.
+    Create a QLineEdit for a string field and a callable to get its value.
+
+    Args:
+        field (FieldInfo): The field info for the str field.
 
     Returns:
-        A tuple containing a QLineEdit widget and a callable that returns
-        the current string value.
+        tuple[QLineEdit, Callable[[], str]]: A tuple where:
+            - QLineEdit: The widget for string input.
+            - Callable[[], str]: Returns the current string value from the
+              widget.
     """
     widget = QtWidgets.QLineEdit()
     return widget, widget.text
@@ -59,24 +75,35 @@ def handle_bool(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QCheckBox, typing.Callable[[], bool]]:
     """
-    Handle a boolean field to extract its properties.
+    Create a QCheckBox for a boolean field and a callable to get its value.
+
+    Args:
+        field (FieldInfo): The field info for the bool field.
 
     Returns:
-        A tuple containing a QCheckBox widget and a callable that returns
-        the current boolean value.
+        tuple[QCheckBox, Callable[[], bool]]: A tuple where:
+            - QCheckBox: The widget for boolean input.
+            - Callable[[], bool]: Returns the current boolean value from the
+              widget.
     """
     widget = QtWidgets.QCheckBox()
     return widget, widget.isChecked
 
 
-def handle_None(  # noqa: N802
+def handle_None(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QWidget, typing.Callable[[], None]]:
     """
-    Handle a None field, which is typically used for optional fields.
+    Create a QWidget for a None field (optional/nullable) and a callable
+    that always returns None.
+
+    Args:
+        field (FieldInfo): The field info for the None field.
 
     Returns:
-        A tuple containing a QWidget and a callable that always returns None.
+        tuple[QWidget, Callable[[], None]]: A tuple where:
+            - QWidget: The widget for None/optional input (empty widget).
+            - Callable[[], None]: Always returns None.
     """
     return QtWidgets.QWidget(), lambda: None
 
@@ -87,6 +114,23 @@ def handle_None(  # noqa: N802
 def handle_list(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QWidget, typing.Callable[[], list[object]]]:
+    """
+    Create a QWidget for a list field and a callable to get its values.
+
+    Args:
+        field (FieldInfo): The field info for the list field.
+
+    Returns:
+        tuple[QWidget, Callable[[], list[object]]]: A tuple where:
+            - QWidget: The widget for list input (with add/remove support).
+            - Callable[[], list[object]]: Returns the current list of values
+              from the widget.
+
+    Notes:
+        - The widget allows adding items of the specified type.
+        - If the item type is not supported, NotImplementedError is raised by
+          type_dispatch.
+    """
     item_type = typing.get_args(field.annotation)[0]
     item_input_widget, item_getter = pydanticInput.type_dispatch(item_type)(
         fields.FieldInfo.from_annotation(item_type)
@@ -113,21 +157,25 @@ def handle_dict(
     QtWidgets.QWidget, typing.Callable[[], dict[typing.Hashable, object]]
 ]:
     """
-    Creates a QWidget for editing dictionary fields, with dynamic key and value
-    input widgets.
+    Create a QWidget for a dict field and a callable to get its value.
 
     Args:
-        field (fields.FieldInfo): The field information containing the
-        dictionary type annotation.
+        field (FieldInfo): The field info for the dict field.
 
     Returns:
-        tuple[QtWidgets.QWidget, Callable[[], dict[typing.Hashable, object]]]:
-            - A QWidget containing the dictionary editor UI.
-            - A callable that returns the current dictionary as entered by the
-            user.
-    The widget allows users to add key-value pairs using dynamically generated
-    input widgets for the specified key and value types. The returned callable
-    retrieves the current state of the dictionary from the UI.
+        tuple[QWidget, Callable[[], dict[Hashable, object]]]: A tuple where:
+            - QWidget: The widget for dictionary input (with add/remove
+              support).
+            - Callable[[], dict[Hashable, object]]: Returns the current
+              dictionary as entered by the user.
+
+    Notes:
+        - The widget allows users to add key-value pairs using dynamically
+          generated input widgets for the specified key and value types.
+        - The returned callable retrieves the current state of the dictionary
+          from the UI.
+        - If the key or value type is not supported, NotImplementedError is
+          raised by type_dispatch.
     """
 
     key_type, value_type = typing.get_args(field.annotation)
@@ -162,11 +210,17 @@ def handle_datetime(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QDateTimeEdit, typing.Callable[[], datetime.datetime]]:
     """
-    Handle a datetime field to extract its properties.
+    Create a QDateTimeEdit for a datetime field and a callable to get its
+    value.
+
+    Args:
+        field (FieldInfo): The field info for the datetime field.
 
     Returns:
-        A tuple containing a QDateTimeEdit widget and a callable that returns
-        the current datetime value.
+        tuple[QDateTimeEdit, Callable[[], datetime]]: A tuple where:
+            - QDateTimeEdit: The widget for datetime input.
+            - Callable[[], datetime]: Returns the current datetime value from
+              the widget.
     """
     widget = QtWidgets.QDateTimeEdit()
     widget.setCalendarPopup(True)
@@ -177,11 +231,16 @@ def handle_date(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QDateEdit, typing.Callable[[], datetime.date]]:
     """
-    Handle a date field to extract its properties.
+    Create a QDateEdit for a date field and a callable to get its value.
+
+    Args:
+        field (FieldInfo): The field info for the date field.
 
     Returns:
-        A tuple containing a QDateEdit widget and a callable that returns
-        the current date value.
+        tuple[QDateEdit, Callable[[], date]]: A tuple where:
+            - QDateEdit: The widget for date input.
+            - Callable[[], date]: Returns the current date value from the
+              widget.
     """
     widget = QtWidgets.QDateEdit()
     widget.setCalendarPopup(True)
@@ -192,11 +251,16 @@ def handle_time(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QTimeEdit, typing.Callable[[], datetime.time]]:
     """
-    Handle a time field to extract its properties.
+    Create a QTimeEdit for a time field and a callable to get its value.
+
+    Args:
+        field (FieldInfo): The field info for the time field.
 
     Returns:
-        A tuple containing a QTimeEdit widget and a callable that returns
-        the current time value.
+        tuple[QTimeEdit, Callable[[], time]]: A tuple where:
+            - QTimeEdit: The widget for time input.
+            - Callable[[], time]: Returns the current time value from the
+              widget.
     """
     widget = QtWidgets.QTimeEdit()
     return widget, widget.time().toPython
@@ -209,11 +273,16 @@ def handle_enums(
     field: fields.FieldInfo,
 ) -> tuple[QtWidgets.QComboBox, typing.Callable[[], str]]:
     """
-    Handle an Enum field to extract its properties.
+    Create a QComboBox for an Enum field and a callable to get its value.
+
+    Args:
+        field (FieldInfo): The field info for the Enum field.
 
     Returns:
-        A tuple containing a QComboBox widget and a callable that returns
-        the current selected text as a string.
+        tuple[QComboBox, Callable[[], str]]: A tuple where:
+            - QComboBox: The widget for enum selection.
+            - Callable[[], str]: Returns the current selected text as a
+              string.
     """
     widget = QtWidgets.QComboBox()
     widget.addItems([member.value for member in field.annotation])

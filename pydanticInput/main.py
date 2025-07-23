@@ -4,24 +4,22 @@ from PySide6.QtWidgets import QApplication, QDialogButtonBox, QScrollArea
 import pydanticInput
 
 
-def Input(model: pydantic.BaseModel) -> dict:  # noqa: N802
+def Input(model: type[pydantic.BaseModel]) -> dict:
     """
-    Displays a GUI form for a given Pydantic model and returns user input as a
-    dictionary.
+    Display a PySide6 form for a Pydantic model and return user input as a dict.
 
     Args:
-        model (pydantic.BaseModel): The Pydantic model class to generate the
-        input form for.
+        model (type[BaseModel]): The Pydantic model class to generate the
+            input form for.
 
     Returns:
-        dict: A dictionary containing the values entered by the user,
-        corresponding to the model's fields.
+        dict: A dictionary with values entered by the user, keyed by the
+            model's fields.
 
     Notes:
-        - The function creates a Qt application and displays a form based on the
-        provided Pydantic model.
-        - The form includes OK and Cancel buttons. On OK, the input values are
-        collected and returned.
+        - The function blocks until the user closes the form.
+        - The form includes OK and Cancel buttons.
+        - On OK, input values are collected and returned.
         - On Cancel or window close, an empty dictionary is returned.
     """
 

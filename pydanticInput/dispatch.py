@@ -5,31 +5,68 @@ import types
 import typing
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, fields
+from PySide6 import QtWidgets
 
 from pydanticInput.handlers import pydantic_types, special_forms, std_types
 
 
-def type_dispatch(field_type: type) -> typing.Callable:
+T = typing.TypeVar("T")
+
+
+class FieldHandler(typing.Protocol[T]):
     """
-    Dispatches the appropriate handler function based on the provided field
-    type. This function inspects the given `field_type` and returns a
-    corresponding handler function for processing values of that type. It
-    supports standard Python types (int, float, str, bool, etc.), datetime
-    types, enums, Pydantic BaseModel subclasses, NoneType, as well as
-    generic types such as list, dict, Literal, and Union. If the type is
-    not recognized, a NotImplementedError is raised.
+    Protocol for handler functions that create a QWidget for a field and
+    provide a callable to retrieve the user input value.
+
+    The handler takes a FieldInfo object and returns a tuple:
+        - QWidget: The widget for user input.
+        - Callable[[], T]: A function to get the value from the widget.
+    """
+
+    def __call__(
+        self, field: fields.FieldInfo
+    ) -> tuple[QtWidgets.QWidget, typing.Callable[[], T]]: ...
+
+
+def type_dispatch(field_type: type | object) -> FieldHandler[typing.Any]:
+    """
+    Return a handler for the given field type to build a Qt input widget.
+
+    This function inspects the provided type annotation or class and returns
+    a handler function that can create a QWidget for user input and a callable
+    to extract the value. Supported cases:
+
+    - int: Uses a spinbox for integer input.
+    - float, Decimal: Uses a double spinbox for numeric input.
+    - str: Uses a line edit for string input.
+    - bool: Uses a checkbox for boolean input.
+    - datetime, date, time: Uses appropriate date/time widgets.
+    - Enum: Uses a combo box for enum selection.
+    - BaseModel: Recursively builds a form for nested models.
+    - NoneType: Handles optional/nullable fields.
+    - list: Uses a list widget for multiple values.
+    - dict: Uses a dictionary editor widget.
+    - Literal: Uses a combo box for literal choices.
+    - Union: Allows switching between multiple types at runtime.
 
     Args:
-        field_type (type): The type annotation or class to dispatch a handler
-        for.
+        field_type (type | object): The type annotation or class to dispatch
+            a handler for.
 
     Returns:
-        Callable: A handler function suitable for processing values of the given
-        type.
+        FieldHandler[Any]: A handler function for the given type.
 
     Raises:
-        NotImplementedError: If no handler is implemented for the provided type.
+        NotImplementedError: If no handler is implemented for the provided
+            type. This occurs for unsupported or custom types that do not
+            match any of the above cases. The error message includes the
+            unhandled type and suggests contributing a handler.
+
+    Example:
+        handler = type_dispatch(int)
+        widget, getter = handler(field_info)
+        # widget is a QSpinBox, getter returns the int value
     """
 
     origin_type = typing.get_origin(field_type)

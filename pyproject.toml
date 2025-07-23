@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "M Laraib Ali", email = "laraib.ali@soco-engineers.com" }
+    { name = "M Laraib Ali", email = "laraib.ali@outlook.com" }
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -24,8 +24,10 @@ preview = true
 [tool.ruff.lint]
 isort.lines-after-imports = 2
 isort.split-on-trailing-comma = false
+per-file-ignores = {"__init__.py" = ["F401"], "dispatch.py" = ["PLR091"]}
+pep8-naming.extend-ignore-names = ["handle_*", "Input", "pydanticInput"]
+
 select = [
-    # "C",   # Complexity checks (e.g., McCabe complexity, comprehensions)
     "ANN001", "ANN201", "ANN401", # flake8-annotations (required strict type annotations for public functions)
     "S",   # flake8-bandit (checks basic security issues in code)
     "BLE", # flake8-blind-except (checks the except blocks that do not specify exception)
@@ -43,11 +45,9 @@ select = [
     "YTT", # flake8-2020 (Detects outdated Python 2/3 compatibility issues)
     "FLY", # flynt (Converts old-style string formatting to f-strings)
     "PIE", # flake8-pie
-    # "PL",  # pylint
+    "PL",  # pylint
     "RUF", # Ruff-specific rules (Additional optimizations and best practices)
 ]
-
-ignore = ["S307"]
 
 [tool.ruff.format]
 docstring-code-format = true

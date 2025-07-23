@@ -1,3 +1,4 @@
+import ast
 import typing
 
 from PySide6 import QtCore, QtWidgets
@@ -5,9 +6,14 @@ from PySide6 import QtCore, QtWidgets
 
 class ListEditWidget(QtWidgets.QListWidget):
     """
-    Custom QListWidget with right-click removal support and
-    a simple method to add items programmatically.
-    Displays items with visual separators.
+    A QListWidget for editing lists with add/remove and drag-and-drop support.
+
+    This widget allows users to add, remove, and reorder items in a list.
+    Items are displayed with visual separators for clarity. Right-clicking
+    an item opens a context menu to remove it. Items can be added
+    programmatically using `add_value`.
+
+    Intended for use in dynamic forms for Pydantic models with list fields.
     """
 
     def __init__(self, parent: QtWidgets.QWidget = None):
@@ -35,6 +41,12 @@ class ListEditWidget(QtWidgets.QListWidget):
         """)
 
     def _show_context_menu(self, position: QtCore.QPoint):
+        """
+        Show a context menu at the given position to remove the selected item.
+
+        Args:
+            position (QPoint): The position where the menu should appear.
+        """
         menu = QtWidgets.QMenu()
         remove_action = menu.addAction("Remove")
         action = menu.exec(self.mapToGlobal(position))
@@ -45,25 +57,45 @@ class ListEditWidget(QtWidgets.QListWidget):
 
     def add_value(self, item: object) -> None:
         """
-        Add an item to the list. Supports basic types.
+        Add an item to the list.
+
+        Args:
+            item (object): The item to add. Supports any type that can be
+                represented as a string and reconstructed with ast.literal_eval.
+
+        Notes:
+            - Items are stored as their string representation.
+            - Non-literal types or objects that cannot be reconstructed with
+              ast.literal_eval may not be supported.
         """
         self.addItem(repr(item))
 
     def get_values(self) -> list[object]:
         """
-        Return all values in the list as strings.
+        Get all values in the list, reconstructed from their string
+        representations.
 
         Returns:
-            list: A list of values (as reconstructed from their string
-            representations).
+            list[object]: A list of values, each reconstructed using
+                ast.literal_eval from the string representation stored in the
+                widget.
+
+        Notes:
+            - If an item cannot be reconstructed, an exception will be raised.
         """
-        return [eval(self.item(i).text()) for i in range(self.count())]
+        return [
+            ast.literal_eval(self.item(i).text()) for i in range(self.count())
+        ]
 
 
 class DictEditWidget(QtWidgets.QTableWidget):
     """
-    A widget to allow editing a dictionary with key-value pairs using
-    QTableWidget.
+    A QTableWidget for editing dictionaries with key-value pairs.
+
+    This widget allows users to add and remove key-value pairs. Keys must be
+    hashable and unique. Right-clicking a row opens a context menu to remove
+    the selected row. Intended for use in dynamic forms for Pydantic models
+    with dict fields.
     """
 
     def __init__(self, parent: QtWidgets.QWidget = None):
@@ -80,6 +112,12 @@ class DictEditWidget(QtWidgets.QTableWidget):
         self.__keys = set()
 
     def _show_context_menu(self, position: QtCore.QPoint):
+        """
+        Show a context menu at the given position to remove selected rows.
+
+        Args:
+            position (QPoint): The position where the menu should appear.
+        """
         menu = QtWidgets.QMenu()
         remove_action = menu.addAction("Remove Selected Row")
         action = menu.exec(self.viewport().mapToGlobal(position))
@@ -91,6 +129,17 @@ class DictEditWidget(QtWidgets.QTableWidget):
                 self.removeRow(row)
 
     def add_pair(self, key: typing.Hashable, value: object) -> None:
+        """
+        Add a key-value pair to the table if the key is hashable and unique.
+
+        Args:
+            key (Hashable): The key to add. Must be hashable and unique.
+            value (object): The value to add.
+
+        Notes:
+            - If the key is not hashable or already exists, the pair is not
+              added.
+        """
         try:
             if key in self.__keys:
                 print(
@@ -110,13 +159,27 @@ class DictEditWidget(QtWidgets.QTableWidget):
         self.setItem(row_position, 1, QtWidgets.QTableWidgetItem(repr(value)))
 
     def get_dict(self) -> dict[typing.Hashable, object]:
+        """
+        Get the current dictionary from the table, reconstructing keys and
+        values.
+
+        Returns:
+            dict[Hashable, object]: The current dictionary, with keys and values
+                reconstructed using ast.literal_eval from their string
+                representations.
+
+        Notes:
+            - If a key or value cannot be reconstructed, that pair is skipped.
+        """
         result = {}
         for row in range(self.rowCount()):
             key_item = self.item(row, 0)
             value_item = self.item(row, 1)
             if key_item and value_item:
                 try:
-                    result[eval(key_item.text())] = eval(value_item.text())
+                    result[ast.literal_eval(key_item.text())] = (
+                        ast.literal_eval(value_item.text())
+                    )
                 except (SyntaxError, NameError, TypeError, ValueError) as e:
                     print(
                         "warning:: encounterd the error for converting: "
