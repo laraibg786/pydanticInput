@@ -8,10 +8,25 @@ import pydanticInput
 
 
 def handle_BaseModel(
-    model: typing.Union[pydantic.BaseModel, fields.FieldInfo],
-):
+    model: pydantic.BaseModel | fields.FieldInfo,
+) -> tuple[QtWidgets.QWidget, typing.Callable[[], dict]]:
     """
-    Handle a Pydantic BaseModel to extract its fields and types.
+    Create a QWidget form for a Pydantic BaseModel and a callable to get input.
+
+    Args:
+        model (BaseModel | FieldInfo):
+            The Pydantic model class or a FieldInfo object with the model
+            annotation.
+
+    Returns:
+        tuple[QWidget, Callable[[], dict]]: A tuple where:
+            - The QWidget contains the form for the model fields.
+            - The callable returns a dict mapping field names to user input.
+
+    Notes:
+        - If a FieldInfo is provided, a checkbox is included to show or hide
+          the input widget.
+        - Nested types (BaseModel fields) are also handled recursively.
     """
     fields_container = QtWidgets.QWidget()
     fields_container.setLayout(QtWidgets.QFormLayout())
@@ -32,9 +47,9 @@ def handle_BaseModel(
 
     field_val_map = {}
     for field_name, field in model.__pydantic_fields__.items():
-        field_widget, field_getter = pydanticInput.type_dispatch(field.annotation)(
-            field
-        )
+        field_widget, field_getter = pydanticInput.type_dispatch(
+            field.annotation
+        )(field)
         fields_container.layout().addRow(field_name, field_widget)
         field_val_map[field_name] = field_getter
 
