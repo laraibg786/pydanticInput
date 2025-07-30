@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.11.7",
     "pyside6-essentials>=6.9.1",
 ]
+scripts.pydanticInput = "pydanticInput.main:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
